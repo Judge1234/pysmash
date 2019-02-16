@@ -10,6 +10,5 @@ class Smasher:
     def quit(self):
         self.driver.close()
  
-
     def __repr__(self):
         return f'Smasher: {self.url}'

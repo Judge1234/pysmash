@@ -1,13 +1,13 @@
 import platform
 import psutil
+import threading
 from datetime import datetime
 from config import Config
-from auto import auto_0
+from auto import Smasher
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
-import threading
-from flask import Flask, jsonify, request, redirect, url_for
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_basicauth import BasicAuth
@@ -26,7 +26,7 @@ options.headless = False
 
 THREADLOCK      = threading.Lock()
 GLOBAL_COUNT    = 0
-URL             = 'https://www.google.com/'
+URL_0           = 'https://www.google.com/'
 
 
 
@@ -54,13 +54,13 @@ def run(*, smash_amount):
     assert type(smash_amount) == int
     driver = webdriver.Chrome(ChromeDriverManager().install(),
                               chrome_options=options)
-    
+    smash_0 = Smasher(driver, URL_0)
     for i in range(smash_amount):
-        auto_0(driver, URL)
+        smash_0.start()
         global GLOBAL_COUNT
         with THREADLOCK:
             GLOBAL_COUNT += 1
-
+    
 
 def threaded_smash(*, smash_amount, num_threads):
     threads = []
@@ -95,7 +95,6 @@ def execute():
     threads = request.json['threads']
     try:
         threaded_smash(smash_amount=int(amount), num_threads=threads)
-        global GLOBAL_COUNT
         session = SmashLog(URL, amount * threads)
         db.session.add(session)
         db.session.commit()
@@ -103,11 +102,11 @@ def execute():
         return jsonify({"Error": "Invalid Entry"})
     
     return jsonify({"Status": "In Progress",
+                    "Targets": [URL_0],
                     "Total Hits": amount * threads,
                     "Threads": threads,
                     "Running On": platform.platform(),
-                    "Network Data": psutil.net_if_addrs()})
-
+                    "Network Data": psutil.net_if_addrs()}), 201
 
 
 @app.route('/history')
@@ -134,9 +133,15 @@ def reset():
     reset_global()
     return jsonify({"Status": "Global Count Reset"})
 
-    
-    
-    
+
+@app.errorhandler(404)
+def error404(error):
+    return jsonify({"Status":"Error: 404"}), 404
+
+
+@app.errorhandler(401)
+def error401(error):
+    return jsonify({"Status":"Error: 401"}), 401
     
 
 
